@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark"><head><meta charset="UTF-8">
+<title>hero F1 - all real CSS + static hero</title><style>
+/* v2.5：7 张图叠放固定位置交叉淡入 + 文字反向滚动。section 高 n*100vh；
+ * .hero-pin sticky 锁 100vh；.hero-fixed 内 7 张 .hero-slide-img 叠在同一位置，
+ *   opacity/scale 由 JS 按帧直接写（无 CSS transition）；
+ * .hero-a-fixed：单个静态描边 A 水印（图片层之上、文字层之下）；
+ * .hero-track-txt（文字，倒序 [5..0]）随滚动位移 translateY(-(1-p)*total)，
+ * 滚轮往下时文字往下走，在固定视口位置一张张经过。
+ * 7+2 层 layer：bg / A / num / loc / cat / title / desc / meta / link / scroll。
+ * is-light 恢复：浅色图上文字/dots/箭头转 ink（project.html 同样用此类）。
+ * Easing 统一 var(--ease-out)。
+ * ============================================================ */
+
+.hero {
+  position: relative;
+  background: var(--paper);
+  /* 高度由 JS 设为 n*100vh（scroll-driven 滚动区） */
+}
+/* sticky 视口：锁 100vh，双 track 在内部反向位移 */
+.hero-pin {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  min-height: 560px;
+  overflow: hidden;
+}
+/* 固定图容器：7 张 .hero-slide-img 叠在同一固定位置 */
+.hero-fixed {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+/* v2.5：img slide 叠放，opacity/scale 由 JS 按帧直接写，无 CSS transition */
+.hero-slide-img {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+/* 覆盖 [data-layer="bg"] 的 .in 入场（project 页仍用 .in；首页由 JS 直接写 opacity） */
+.hero-slide-img [data-layer="bg"],
+.hero-slide-img [data-layer="bg"].in {
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
+/* v2.5：单个静态描边 A 水印（图片层之上、文字层之下） */
+.hero-a-fixed {
+  position: absolute;
+  right: 5vw;
+  top: 50%;
+  width: min(63vw, 850px);
+  transform: translateY(-50%);
+  pointer-events: none;
+  z-index: 1;
+}
+.hero-a-fixed svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.hero-track-txt {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  will-change: transform;
+}
+
+/* ---------- slide 骨架：track 内正常流纵向排布，每张 100vh ---------- */
+.hero-slide {
+  position: relative;
+  height: 100vh;
+  min-height: 560px;
+  overflow: hidden;
+}
+/* v1.9：位移本身即过渡，mask 切换（is-active/is-entering/is-leaving/pre-enter）已删除 */
+/* v2.2：文字 track 透明，只有 active 的那张可交互（VIEW PROJECT 只在当前张可点） */
+.hero-slide-txt { pointer-events: none; }
+.hero-slide-txt.is-active { pointer-events: auto; }
+
+/* ---------- layer 01：背景图 ---------- */
+.hero-bgwrap {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+[data-layer="bg"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: scale(1.06);
+  transition: opacity 900ms var(--ease-out), transform 1400ms var(--ease-out);
+}
+/* §43 WebP：picture 块级化，内层 img 继承原有规则 */
+[data-layer="bg"] picture {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+[data-layer="bg"].in { opacity: 1; transform: scale(1); }
+[data-layer="bg"] img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 30%; /* 臉部偏上，避開左下標題與右側 A 標（§10 P1） */
+  /* §10 P2：hero 灰階優先 */
+  filter: grayscale(.72) contrast(1.13);
+  will-change: transform; /* v2.5 crossfade：scale 由 JS 按帧写（1.06→1.0 收敛） */
+}
+/* v2.7-B：视频 slide——与 img 同尺寸/灰階，crossfade scale 同样写在 video 上 */
+[data-layer="bg"] video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 30%;
+  filter: grayscale(.72) contrast(1.13);
+  will-change: transform;
+  display: block;
+}
+
+/* ---------- layer 02：巨大 A 标（§16 + §10 P1 描边版） ---------- */
+.hero-agroup {
+  position: absolute;
+  right: 5vw;
+  top: 50%;
+  width: min(63vw, 850px);       /* §10 P1：构图锚点 */
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+/* 内联描边 A：a-symbol.svg 几何，paths fill="none" stroke-width="6"，
+   针尖/方点保留填充；几何不变，不算重画 */
+[data-layer="a"] {
+  width: 100%;
+  color: rgba(255, 255, 255, .82); /* A 永黑或白：深色照片用白（.82） */
+  opacity: 0;
+  transform: translateX(30px);
+  clip-path: inset(0 80% 0 0); /* clip 80% → 0 */
+  transition: opacity 700ms var(--ease-out),
+              transform 700ms var(--ease-out),
+              clip-path 700ms var(--ease-out);
+}
+/* 浅色 slide：前景全部转 ink（A / 文字 / dots / 进度条 / scroll 指示器）；
+   v2.5 起 index hero 与 project.html 共用（按当前 slide 的 tone 切换） */
+.hero.is-light .hero-textgroup { color: var(--ink); }
+.hero.is-light .hero-topline { color: var(--ink); }
+.hero.is-light .scroll-indicator { color: var(--ink); }
+.hero.is-light [data-layer="a"] { color: rgba(10, 10, 12, .82); }
+.hero.is-light [data-layer="meta"] { color: rgba(10, 10, 12, .75); }
+.hero.is-light .hero-dots button { background: rgba(10, 10, 12, .35); background-clip: content-box; }
+.hero.is-light .hero-dots button:hover { background-color: rgba(10, 10, 12, .7); background-clip: content-box; }
+.hero.is-light .hero-dots button.is-active { background-color: var(--ink); background-clip: content-box; }
+.hero.is-light .hero-progress i { background: var(--ink); }
+/* v2.5.1：is-light 针对的是浅色照片（与页面主题无关），深色主题下仍钉死墨色，
+   否则 var(--ink) 被反转为纸白，浅色照片上白字不可读 */
+html[data-theme="dark"] .hero.is-light .hero-textgroup,
+html[data-theme="dark"] .hero.is-light .hero-topline,
+html[data-theme="dark"] .hero.is-light .scroll-indicator { color: #0A0A0A; }
+html[data-theme="dark"] .hero.is-light .hero-dots button.is-active { background-color: #0A0A0A; }
+html[data-theme="dark"] .hero.is-light .hero-progress i { background: #0A0A0A; }
+[data-layer="a"] svg {
+  width: 100%;
+  height: auto;
+}
+[data-layer="a"].in {
+  opacity: .7; /* §10 P1：锚点不透明度 */
+  transform: translateX(0);
+  clip-path: inset(0 0 0 0);
+}
+/* 禁旋转 / 弹跳 / 辉光 / 3D：全站无此类声明 */
+
+/* ---------- 文字组（§17 视差：整体为一组） ---------- */
+.hero-textgroup {
+  position: absolute;
+  left: clamp(24px, 6vw, 96px);
+  bottom: 120px;
+  z-index: 2;
+  color: #FAFAF8;
+  max-width: 60ch;
+}
+/* ---------- 顶部 mono 行（§10 P1：N°01 / 06 + 城市 — 年份） ---------- */
+.hero-topline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(76px + 28px);
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-inline: clamp(24px, 6vw, 96px);
+  color: #FAFAF8;
+  pointer-events: none;
+}
+
+/* layer 03–08：timeline 入场（§13） */
+[data-layer="num"],
+[data-layer="loc"],
+[data-layer="cat"],
+[data-layer="title"],
+[data-layer="desc"],
+[data-layer="meta"],
+[data-layer="link"] {
+  opacity: 0;
+  transform: translateY(26px);
+  transition: opacity 600ms var(--ease-out), transform 600ms var(--ease-out);
+}
+[data-layer="num"].in,
+[data-layer="loc"].in,
+[data-layer="cat"].in,
+[data-layer="title"].in,
+[data-layer="desc"].in,
+[data-layer="meta"].in,
+[data-layer="link"].in {
+  opacity: 1;
+  transform: translateY(0);
+}
+[data-layer="num"],
+[data-layer="loc"],
+[data-layer="cat"],
+[data-layer="meta"] {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--label-size);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+[data-layer="cat"] { margin-bottom: 12px; }
+[data-layer="title"] {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(58px, 9.4vw, 145px); /* §10 P1：杂志封面巨标题 */
+  line-height: .82;
+  letter-spacing: -.065em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+[data-layer="meta"] { opacity: 0; color: rgba(250, 250, 248, 0.75); }
+[data-layer="meta"].in { opacity: 1; }
+/* v2.2：描述最多两行 + VIEW PROJECT 链接（随 textgroup 颜色走，is-light 自适应） */
+[data-layer="desc"] {
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.7;
+  color: rgba(250, 250, 248, .85);
+  max-width: 44ch;
+  margin-bottom: 24px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+[data-layer="link"] {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--label-size);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 6px;
+  text-decoration-thickness: 1px;
+}
+[data-layer="link"]:hover { text-decoration-thickness: 2px; }
+.hero.is-light [data-layer="desc"] { color: rgba(10, 10, 12, .8); }
+
+/* ---------- layer 07：scroll 指示器（§19，常驻） ---------- */
+.scroll-indicator {
+  position: absolute;
+  right: clamp(24px, 4vw, 48px);
+  bottom: 32px;
+  z-index: 3;
+  color: #FAFAF8;
+  font-family: var(--font-mono);
+  font-size: var(--label-size);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  text-align: right;
+  line-height: 1.9;
+  animation: scroll-nudge 2.6s ease-in-out infinite alternate; /* 上下 8px，禁 bounce */
+  transition: opacity .3s var(--ease-out); /* 滚开即淡出（JS 写 opacity） */
+}
+@keyframes scroll-nudge {
+  from { transform: translateY(-4px); }
+  to { transform: translateY(4px); }
+}
+
+/* ---------- hero 导航（§10 P1：短横线 dots + 2px 进度条，scroll 驱动） ---------- */
+.hero-nav {
+  position: absolute;
+  left: clamp(24px, 6vw, 96px);
+  bottom: 32px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  color: #FAFAF8;
+}
+.hero-dots { display: flex; gap: 9px; align-items: center; }
+.hero-dots button {
+  width: 34px;
+  height: 2px;              /* 34px 短横线 */
+  padding: 6px 0;           /* 点击热区 */
+  background: rgba(250, 250, 248, .35);
+  background-clip: content-box;
+  transition: width .4s var(--ease-out), background-color .4s var(--ease-out);
+}
+.hero-dots button:hover { background-color: rgba(250, 250, 248, .7); background-clip: content-box; }
+.hero-dots button.is-active {
+  width: 62px;              /* active 62px 白 */
+  background-color: #FAFAF8;
+  background-clip: content-box;
+}
+/* 底部 2px 进度条：v1.9 起由 JS 按 scroll 进度直接 scaleX（无 keyframes） */
+.hero-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  height: 2px;
+  pointer-events: none;
+}
+.hero-progress i {
+  display: block;
+  height: 100%;
+  background: #FAFAF8;
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+}
+
+/* ---------- 断点 ---------- */
+@media (max-width: 768px) {
+  .hero-agroup,
+  .hero-a-fixed {
+    width: 68vw;
+    right: 4vw;
+  }
+  .hero-textgroup { bottom: 150px; }
+}
+
+@media (max-width: 480px) {
+  /* §37：隐藏 mono 辅助标签 */
+  [data-layer="num"],
+  [data-layer="loc"],
+  [data-layer="desc"],
+  [data-layer="meta"] { display: none; }
+  .hero-agroup,
+  .hero-a-fixed {
+    width: 74vw;              /* 65–80vw */
+    top: auto;
+    bottom: 12vh;
+    transform: none;
+    right: 2vw;
+    opacity: 0.9;
+  }
+  .hero-textgroup {
+    bottom: auto;
+    top: calc(60px + 8vh);    /* 文字移位避让（§42 优先移位） */
+  }
+  .hero-nav { bottom: 24px; }
+  .scroll-indicator { display: none; }
+}
+
+/* ---------- 左右箭头（JS 生成，hover 显现；触屏常显） ---------- */
+.hero-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 4;
+  width: 56px;
+  height: 56px;
+  margin-top: -28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  color: #FAFAF8;
+  font-size: 30px;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity .35s var(--ease-out);
+  cursor: pointer;
+}
+.hero-arrow--prev { left: clamp(74px, 9vw, 112px); }   /* v2.7：避让右侧浮动按钮组（对称内移） */
+.hero-arrow--next { right: clamp(74px, 9vw, 112px); }
+.hero.is-light .hero-arrow { color: var(--ink); }
+@media (hover: hover) {
+  .hero:hover .hero-arrow { opacity: .6; }
+  .hero .hero-arrow:hover { opacity: 1; }
+}
+@media (hover: none) {
+  .hero-arrow { opacity: .65; }
+}
+
+
+</style>
+
+
+
+
+
+
+
+
+
+<style>body{margin:0}.lbl{position:fixed;top:8px;left:8px;z-index:99;background:#000;color:#fff;padding:4px 8px;font:12px monospace}</style>
+</head><body>
+<div class="lbl">H1: REAL hero.css inlined, static hero, slide 2 (photo-01) opacity:1</div>
+<section class="hero" id="top" data-js="hero" style="height:100vh;position:relative;">
+<div class="hero-pin" data-js="hero-pin">
+<div class="hero-fixed" data-js="hero-fixed">
+<article class="hero-slide hero-slide-img" aria-hidden="true" style="opacity:0;">
+<div class="hero-bgwrap" data-px="bg"><div data-layer="bg">
+<video loop playsinline muted preload="metadata" poster="https://2ndforcecrew.github.io/aka-cristi-portfolio/assets/video/river-leviathan-poster.jpg" style="transform:scale(1);"><source src="https://2ndforcecrew.github.io/aka-cristi-portfolio/assets/video/river-leviathan.mp4" type="video/mp4"></video>
+</div></div></article>
+<article class="hero-slide hero-slide-img" aria-hidden="true" style="opacity:1;">
+<div class="hero-bgwrap" data-px="bg"><div data-layer="bg">
+<picture><source type="image/webp" srcset="https://2ndforcecrew.github.io/aka-cristi-portfolio/assets/img/photo-01.webp"><img src="https://2ndforcecrew.github.io/aka-cristi-portfolio/assets/img/photo-01.jpg" alt="t" decoding="async" loading="eager" fetchpriority="high" style="transform:scale(1);"></picture>
+</div></div></article>
+<article class="hero-slide hero-slide-img" aria-hidden="true" style="opacity:0;">
+<div class="hero-bgwrap" data-px="bg"><div data-layer="bg">
+<picture><source type="image/webp" srcset="https://2ndforcecrew.github.io/aka-cristi-portfolio/assets/img/photo-02.webp"><img src="https://2ndforcecrew.github.io/aka-cristi-portfolio/assets/img/photo-02.jpg" alt="t" decoding="async" loading="eager" fetchpriority="high" style="transform:scale(1.06);"></picture>
+</div></div></article>
+</div></div></section>
+</body></html>
