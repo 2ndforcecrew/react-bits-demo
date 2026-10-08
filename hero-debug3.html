@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>reduced-motion probe</title>
+<style>
+  body{background:#0A0A0A;color:#fff;font-family:monospace;margin:20px}
+  #probe{width:200px;height:100px;background:#0f0;display:flex;align-items:center;justify-content:center}
+  @media (prefers-reduced-motion: reduce){
+    #probe{background:#f00}
+    #probetext::after{content:"REDUCED-MOTION IS ON"}
+  }
+  #probetext::after{content:"reduced-motion is off"}
+  /* exact rule from motion.css (only inside the media query) */
+  @media (prefers-reduced-motion: reduce){
+    .hero-slide:not(.is-active){visibility:hidden}
+  }
+  .hero-slide{position:relative;width:300px;height:150px;background:#00f;margin-top:20px}
+  .hero-slide img{width:100%;height:100%;object-fit:cover}
+</style></head><body>
+<div id="probe"><span id="probetext"></span></div>
+<div class="hero-slide">
+  <img src="https://2ndforcecrew.github.io/aka-cristi-portfolio/assets/img/photo-01.jpg" alt="t">
+</div>
+<p style="margin-top:20px">If the blue box photo is INVISIBLE, reduced-motion is ON and the visibility rule hides hero slides.</p>
+</body></html>
