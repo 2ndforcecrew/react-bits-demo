@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark"><head><meta charset="UTF-8">
+<title>T1 - real CSS minus filter/will-change</title>
+<link rel="stylesheet" href="https://2ndforcecrew.github.io/aka-cristi-portfolio/css/tokens.css?v=2.8.3">
+<link rel="stylesheet" href="https://2ndforcecrew.github.io/aka-cristi-portfolio/css/base.css?v=2.8.3">
+<link rel="stylesheet" href="https://2ndforcecrew.github.io/aka-cristi-portfolio/css/layout.css?v=2.8.3">
+<link rel="stylesheet" href="https://2ndforcecrew.github.io/aka-cristi-portfolio/css/hero.css?v=2.8.3">
+<style>
+/* Override: remove filter and will-change from hero img */
+[data-layer="bg"] img { filter: none !important; will-change: auto !important; }
+.lbl{position:fixed;top:8px;left:8px;z-index:99;background:#000;color:#fff;padding:4px 8px;font:12px monospace}
+</style></head><body>
+<div class="lbl">T1: real CSS, no filter/will-change on hero img</div>
+<section class="hero" style="height:100vh;position:relative;">
+<div class="hero-pin"><div class="hero-fixed">
+<article class="hero-slide hero-slide-img" style="opacity:1;">
+<div class="hero-bgwrap"><div data-layer="bg">
+<picture><source type="image/webp" srcset="https://2ndforcecrew.github.io/aka-cristi-portfolio/assets/img/photo-01.webp"><img src="https://2ndforcecrew.github.io/aka-cristi-portfolio/assets/img/photo-01.jpg" alt="t" loading="eager" decoding="async"></picture>
+</div></div></article>
+</div></div></section>
+</body></html>
