@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>sticky test</title>
+<style>
+  body{background:#0A0A0A;color:#fff;font-family:monospace;margin:0}
+  .lbl{position:fixed;top:8px;left:8px;z-index:99;background:#000;padding:4px 8px;font-size:12px}
+  /* E's exact working CSS */
+  .hero-fixed{position:absolute;inset:0;z-index:0;height:100vh}
+  .hero-slide-img{position:absolute;inset:0;opacity:0;pointer-events:none}
+  .hero-bgwrap{position:absolute;inset:0;overflow:hidden}
+  [data-layer="bg"]{position:absolute;inset:0}
+  .hero-slide-img [data-layer="bg"]{opacity:1;transform:none;transition:none}
+  [data-layer="bg"] picture{display:block;width:100%;height:100%}
+  [data-layer="bg"] img{width:100%;height:100%;object-fit:cover;object-position:50% 30%;filter:grayscale(.72) contrast(1.13);will-change:transform}
+  /* THE ONLY DIFFERENCE: sticky pin wrapper */
+  .hero-pin{position:sticky;top:0;height:100vh;overflow:hidden}
+  .tall{height:200vh}
+</style></head><body>
+<div class="lbl">S1: E's working CSS + STICKY pin wrapper</div>
+<div class="tall">
+<div class="hero-pin">
+<div class="hero-fixed">
+<div class="hero-slide-img" style="opacity:1"><div class="hero-bgwrap"><div data-layer="bg">
+<picture><source type="image/webp" srcset="https://2ndforcecrew.github.io/aka-cristi-portfolio/assets/img/photo-01.webp"><img src="https://2ndforcecrew.github.io/aka-cristi-portfolio/assets/img/photo-01.jpg" loading="eager" decoding="async" alt="t"></picture>
+</div></div></div>
+</div></div></div>
+</body></html>
