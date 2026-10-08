@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-Hant"><head><meta charset="UTF-8">
+<title>hero img debug</title>
+<style>
+  body{background:#0A0A0A;color:#fff;font-family:monospace;margin:0}
+  .case{position:relative;height:240px;border:1px solid #333;margin:10px;overflow:hidden}
+  .case b{position:absolute;top:8px;left:8px;z-index:9;background:#000;padding:4px 8px;font-size:12px}
+  /* exact copy of hero.css structure */
+  .hero-slide-img{position:absolute;inset:0;opacity:0;pointer-events:none}
+  .hero-bgwrap{position:absolute;inset:0;overflow:hidden}
+  [data-layer="bg"]{position:absolute;inset:0}
+  .hero-slide-img [data-layer="bg"]{opacity:1;transform:none;transition:none}
+  [data-layer="bg"] picture{display:block;width:100%;height:100%}
+  [data-layer="bg"] img{width:100%;height:100%;object-fit:cover;filter:grayscale(.72) contrast(1.13)}
+  [data-layer="bg"] video{width:100%;height:100%;object-fit:cover;filter:grayscale(.72) contrast(1.13);display:block}
+</style></head><body>
+<div class="case" id="cA"><b>A: picture+img eager, opacity:1 from start</b>
+  <div class="hero-slide-img" style="opacity:1"><div class="hero-bgwrap"><div data-layer="bg">
+    <picture><source type="image/webp" srcset="https://2ndforcecrew.github.io/aka-cristi-portfolio/assets/img/photo-01.webp"><img src="https://2ndforcecrew.github.io/aka-cristi-portfolio/assets/img/photo-01.jpg" loading="eager" decoding="async" fetchpriority="high" alt="t"></picture>
+  </div></div></div>
+</div>
+<div class="case" id="cB"><b>B: plain img (no picture), opacity:1</b>
+  <div class="hero-slide-img" style="opacity:1"><div class="hero-bgwrap"><div data-layer="bg">
+    <img src="https://2ndforcecrew.github.io/aka-cristi-portfolio/assets/img/photo-02.jpg" loading="eager" decoding="async" alt="t">
+  </div></div></div>
+</div>
+<div class="case" id="cC"><b>C: picture+img, opacity 0 -&gt; JS sets 1 after 1.5s</b>
+  <div class="hero-slide-img" id="cCslide"><div class="hero-bgwrap"><div data-layer="bg">
+    <picture><source type="image/webp" srcset="https://2ndforcecrew.github.io/aka-cristi-portfolio/assets/img/photo-03.webp"><img src="https://2ndforcecrew.github.io/aka-cristi-portfolio/assets/img/photo-03.jpg" loading="eager" decoding="async" alt="t"></picture>
+  </div></div></div>
+</div>
+<div class="case" id="cD"><b>D: video control</b>
+  <div class="hero-slide-img" style="opacity:1"><div class="hero-bgwrap"><div data-layer="bg">
+    <video muted loop playsinline preload="metadata" poster="https://2ndforcecrew.github.io/aka-cristi-portfolio/assets/video/river-leviathan-poster.jpg"><source src="https://2ndforcecrew.github.io/aka-cristi-portfolio/assets/video/river-leviathan.mp4" type="video/mp4"></video>
+  </div></div></div>
+</div>
+<script>
+setTimeout(function(){document.getElementById('cCslide').style.opacity='1';},1500);
+</script>
+</body></html>
